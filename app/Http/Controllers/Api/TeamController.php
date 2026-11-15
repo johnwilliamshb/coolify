@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\Access\Grant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -17,6 +18,24 @@ class TeamController extends Controller
         ]);
 
         return serializeApiResponse($team);
+    }
+
+    /** Members with the fields needed to manage project-specific members. */
+    public static function serializeMembers($members)
+    {
+        return $members->map(function ($member) {
+            $member->makeHidden([
+                'pivot',
+                'email_change_code',
+                'email_change_code_expires_at',
+            ]);
+            $data = serializeApiResponse($member);
+            $data['role'] = $member->pivot->role ?? null;
+            $data['access'] = Grant::listToArray(Grant::listFrom($member->pivot->access ?? null));
+            $data['can_create_projects'] = (bool) ($member->pivot->can_create_projects ?? false);
+
+            return $data;
+        })->values();
     }
 
     #[OA\Get(
@@ -174,14 +193,9 @@ class TeamController extends Controller
         }
         $this->authorize('view', $team);
         $members = $team->members;
-        $members->makeHidden([
-            'pivot',
-            'email_change_code',
-            'email_change_code_expires_at',
-        ]);
 
         return response()->json(
-            serializeApiResponse($members),
+            self::serializeMembers($members),
         );
     }
 
@@ -338,14 +352,9 @@ class TeamController extends Controller
         if (is_null($team)) {
             return response()->json(['message' => 'Team not found.'], 404);
         }
-        $team->members->makeHidden([
-            'pivot',
-            'email_change_code',
-            'email_change_code_expires_at',
-        ]);
 
         return response()->json(
-            serializeApiResponse($team->members),
+            self::serializeMembers($team->members),
         );
     }
 }
