@@ -46,6 +46,13 @@
                     <p x-show="$wire.role === 'member'" class="text-[12px] text-neutral-500 lg:col-span-2 dark:text-fg-faint">
                         Scopes: <span class="text-neutral-700 dark:text-fg-dim">{{ \App\Livewire\Team\Member\Access::summary($grants) }}</span>
                     </p>
+                    <label x-show="$wire.role === 'member'" class="flex cursor-pointer items-start gap-2 text-[13px] lg:col-span-2">
+                        <input type="checkbox" wire:model.live="canCreateProjects" class="mt-0.5">
+                        <span>
+                            <span class="font-medium text-neutral-800 dark:text-fg">Can create their own projects</span>
+                            <span class="block text-[12px] text-neutral-500 dark:text-fg-faint">They can create a new project in this team and deploy their own apps there. A project they create becomes their project: they only see that project, and can only deploy on the servers it already uses.</span>
+                        </span>
+                    </label>
                 </div>
             </x-application.settings-section>
         </form>

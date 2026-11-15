@@ -49,6 +49,9 @@ class Access extends Component
     /** @var list<array{key: string, targets: list<string>, levels: array<string, bool>}> */
     public array $grants = [];
 
+    /** Whether the member may create projects of their own in this team. */
+    public bool $canCreateProjects = false;
+
     public function mount(): void
     {
         $team = currentTeam();
@@ -66,6 +69,7 @@ class Access extends Component
 
         $stored = $this->member()->pivot->access;
         $this->grants = $this->rowsFrom($stored === null ? AccessResolver::defaultMemberGrants() : Grant::listFrom($stored));
+        $this->canCreateProjects = (bool) ($this->member()->pivot->can_create_projects ?? false);
         $this->open = true;
     }
 
@@ -115,7 +119,10 @@ class Access extends Component
         $member = $this->member();
         $grants = $this->validatedGrants();
 
-        $member->teams()->updateExistingPivot($this->teamId, ['access' => json_encode(Grant::listToArray($grants))]);
+        $member->teams()->updateExistingPivot($this->teamId, [
+            'access' => json_encode(Grant::listToArray($grants)),
+            'can_create_projects' => $this->canCreateProjects,
+        ]);
         app(AccessResolver::class)->flush();
 
         auditLog('ui.team_member.access_updated', [
@@ -123,6 +130,7 @@ class Access extends Component
             'member_id' => $member->id,
             'member_name' => $member->name,
             'access' => Grant::listToArray($grants),
+            'can_create_projects' => $this->canCreateProjects,
         ]);
 
         $this->open = false;
@@ -227,15 +235,15 @@ class Access extends Component
     /**
      * Short description of a member's access for the members list.
      */
-    public static function summary(mixed $storedAccess): string
+    public static function summary(mixed $storedAccess, bool $canCreateProjects = false): string
     {
         if ($storedAccess === null) {
-            return 'Team-wide read (default)';
+            return $canCreateProjects ? 'Team-wide read (default) + Can create projects' : 'Team-wide read (default)';
         }
 
         $grants = array_filter(Grant::listFrom($storedAccess), fn (Grant $grant) => $grant->levels !== []);
         if ($grants === []) {
-            return 'No access';
+            return $canCreateProjects ? 'No access + Can create projects' : 'No access';
         }
 
         $parts = [];
@@ -249,6 +257,9 @@ class Access extends Component
             if (isset($counts[$scope->value])) {
                 $parts[] = $counts[$scope->value].' '.Str::plural($scope->value, $counts[$scope->value]);
             }
+        }
+        if ($canCreateProjects) {
+            $parts[] = 'Can create projects';
         }
 
         return implode(' + ', $parts);

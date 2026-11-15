@@ -29,7 +29,7 @@
         <div class="truncate text-[12px] text-neutral-500 dark:text-fg-dim">{{ $member->email }}</div>
         @can('manageMembers', currentTeam())
             @if (data_get($member, 'pivot.role') === 'member')
-                @php($accessSummary = App\Livewire\Team\Member\Access::summary(data_get($member, 'pivot.access')))
+                @php($accessSummary = App\Livewire\Team\Member\Access::summary(data_get($member, 'pivot.access'), (bool) data_get($member, 'pivot.can_create_projects')))
                 <div class="mt-0.5 truncate text-[11px] text-neutral-400 dark:text-fg-faint" title="Access: {{ $accessSummary }}">
                     Access: {{ $accessSummary }}
                 </div>
