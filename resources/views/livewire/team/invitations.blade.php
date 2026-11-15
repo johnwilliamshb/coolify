@@ -29,7 +29,7 @@
                                 <div class="min-w-0 text-[12px] text-neutral-500 dark:text-fg-dim">
                                     <div class="capitalize">{{ $invite->role }}</div>
                                     @if ($invite->role === 'member')
-                                        @php $accessSummary = \App\Livewire\Team\Member\Access::summary($invite->access); @endphp
+                                        @php $accessSummary = \App\Livewire\Team\Member\Access::summary($invite->access, (bool) $invite->can_create_projects); @endphp
                                         <div class="truncate text-[11px] text-neutral-400 dark:text-fg-faint" title="{{ $accessSummary }}">
                                             {{ $accessSummary }}
                                         </div>

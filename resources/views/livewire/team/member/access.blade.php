@@ -190,6 +190,18 @@
                     </button>
                 </div>
             </section>
+
+            @if (!$forInvitation)
+                <section class="flex flex-col gap-2">
+                    <label class="flex cursor-pointer items-start gap-2.5 rounded-lg border border-neutral-200 p-3 dark:border-white/[0.08]">
+                        <input type="checkbox" wire:model.live="canCreateProjects" class="mt-0.5">
+                        <span class="flex min-w-0 flex-col">
+                            <span class="text-[13px] font-medium text-neutral-800 dark:text-fg">Can create their own projects</span>
+                            <span class="text-[12px] text-neutral-500 dark:text-fg-faint">They can create a new project in this team and deploy their own apps there. A project they create becomes their project: they only see that project, and can only deploy on the servers it already uses.</span>
+                        </span>
+                    </label>
+                </section>
+            @endif
         </div>
 
         <x-slot:footer>

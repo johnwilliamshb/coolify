@@ -26,11 +26,15 @@ class InviteLink extends Component
 
     public string $role = 'member';
 
+    /** Whether the invited member may create projects of their own in this team. */
+    public bool $canCreateProjects = false;
+
     protected function rules(): array
     {
         return [
             'email' => 'required|email',
             'role' => ['required', Rule::enum(Role::class)],
+            'canCreateProjects' => 'boolean',
         ];
     }
 
@@ -147,7 +151,7 @@ class InviteLink extends Component
                 'role' => $this->role,
                 'link' => $link,
                 'via' => $sendEmail ? 'email' : 'link',
-            ], ['access' => $access]);
+            ], ['access' => $access, 'can_create_projects' => $this->role === 'member' && $this->canCreateProjects]);
             auditLog('ui.team_invitation.created', [
                 'team_id' => currentTeam()->id,
                 'invitation_uuid' => $invitation->uuid,
@@ -155,6 +159,7 @@ class InviteLink extends Component
                 'role' => $invitation->role,
                 'via' => $invitation->via,
                 'access' => $invitation->access,
+                'can_create_projects' => $invitation->can_create_projects,
             ]);
             if ($sendEmail) {
                 $mail = new MailMessage;
