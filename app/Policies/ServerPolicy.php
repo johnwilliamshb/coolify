@@ -23,7 +23,14 @@ class ServerPolicy
      */
     public function view(User $user, Server $server): bool
     {
-        return $user->teams->contains('id', $server->team_id);
+        if ($user->isAdminOfTeam($server->team_id)) {
+            return true;
+        }
+
+        $resolver = app(AccessResolver::class);
+
+        return $resolver->allowsTeamWide($user, AccessLevel::Read, $server->team_id)
+            || $resolver->allowsOnServer($user, AccessLevel::Read, $server);
     }
 
     /**

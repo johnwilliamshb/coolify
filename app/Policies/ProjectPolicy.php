@@ -36,12 +36,23 @@ class ProjectPolicy
 
     /**
      * Determine whether the user can create projects in the current team.
+     *
+     * A project-scoped member can create in the web UI only, never with a project-scoped token.
      */
     public function create(User $user): bool
     {
         $teamId = $user->currentTeam()?->id;
+        if ($teamId === null) {
+            return false;
+        }
 
-        return $teamId !== null && app(AccessResolver::class)->allowsTeamWide($user, AccessLevel::Write, $teamId);
+        $resolver = app(AccessResolver::class);
+
+        if ($resolver->allowsTeamWide($user, AccessLevel::Write, $teamId)) {
+            return true;
+        }
+
+        return $user->currentAccessToken() === null && $resolver->canCreateProjects($user, $teamId);
     }
 
     /**

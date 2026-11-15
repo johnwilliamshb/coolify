@@ -2,8 +2,10 @@
 
 namespace App\Policies;
 
+use App\Enums\AccessLevel;
 use App\Models\PrivateKey;
 use App\Models\User;
+use App\Services\Access\AccessResolver;
 
 class PrivateKeyPolicy
 {
@@ -30,8 +32,8 @@ class PrivateKeyPolicy
             return $user->canAccessSystemResources();
         }
 
-        // Regular resource: Check team membership
-        return $user->teams->contains('id', $privateKey->team_id);
+        return $user->isAdminOfTeam($privateKey->team_id)
+            || app(AccessResolver::class)->allowsTeamWide($user, AccessLevel::Read, $privateKey->team_id);
     }
 
     /**

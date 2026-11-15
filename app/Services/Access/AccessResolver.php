@@ -144,6 +144,50 @@ class AccessResolver
         return $this->membership($user, $teamId) !== null;
     }
 
+    /** Determine whether the user can create projects in the team. */
+    public function canCreateProjects(User $user, int $teamId): bool
+    {
+        $membership = $this->membership($user, $teamId);
+        if ($membership === null) {
+            return false;
+        }
+
+        $role = $membership->role ?? null;
+        if ($role === 'admin' || $role === 'owner') {
+            return true;
+        }
+
+        return (bool) ($membership->can_create_projects ?? false);
+    }
+
+    /** Give a member the levels on one project. @param list<AccessLevel> $levels */
+    public function grantProjectAccess(User $user, int $teamId, Project $project, array $levels): void
+    {
+        if ($this->memberGrants($user, $teamId) === null) {
+            return;
+        }
+
+        $stored = $this->membership($user, $teamId)?->access;
+        $grants = Grant::listFrom($stored);
+        $grants[] = new Grant(AccessScope::Project, $project->uuid, $levels);
+
+        $merged = [];
+        foreach ($grants as $grant) {
+            $key = $grant->scope->value.':'.($grant->uuid ?? '');
+            $merged[$key] = new Grant(
+                $grant->scope,
+                $grant->uuid,
+                array_values(array_unique([...($merged[$key]->levels ?? []), ...$grant->levels], SORT_REGULAR)),
+            );
+        }
+
+        $user->teams()->updateExistingPivot($teamId, ['access' => json_encode(Grant::listToArray(array_values($merged)))]);
+
+        // Drop the loaded teams relation, it still holds the old grants.
+        $user->unsetRelation('teams');
+        $this->flush();
+    }
+
     /**
      * The `team_user` row of the user. It uses the loaded `teams` relation, the same data `isAdminOfTeam()`
      * reads, but it never loads that relation itself: list queries call this early in a request, and a
