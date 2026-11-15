@@ -105,6 +105,7 @@ Route::group([
 
     Route::get('/projects', [ProjectController::class, 'projects'])->middleware(['api.ability:read']);
     Route::get('/projects/{uuid}', [ProjectController::class, 'project_by_uuid'])->middleware(['api.ability:read']);
+    Route::get('/projects/{uuid}/members', [ProjectController::class, 'project_members'])->middleware(['api.ability:read']);
     Route::get('/projects/{uuid}/environments', [ProjectController::class, 'get_environments'])->middleware(['api.ability:read']);
     // Shared project/environment envs must be registered before the catch-all environment route.
     Route::get('/projects/{uuid}/envs', [SharedEnvironmentVariablesController::class, 'project_envs'])->middleware(['api.ability:read']);

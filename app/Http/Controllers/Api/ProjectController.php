@@ -2,8 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\AccessLevel;
+use App\Enums\AccessScope;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Models\TeamInvitation;
+use App\Services\Access\AccessResolver;
+use App\Services\Access\Grant;
 use App\Support\ValidationPatterns;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -276,6 +281,9 @@ class ProjectController extends Controller
             'description' => $request->description,
             'team_id' => $teamId,
         ]);
+        app(AccessResolver::class)->grantProjectAccess(
+            auth()->user(), $teamId, $project, [AccessLevel::Write, AccessLevel::Deploy]
+        );
 
         return response()->json([
             'uuid' => $project->uuid,
@@ -542,6 +550,87 @@ class ProjectController extends Controller
         $environments = $project->environments()->select('id', 'name', 'uuid')->get();
 
         return response()->json(serializeApiResponse($environments));
+    }
+
+    #[OA\Get(
+        summary: 'Project members',
+        description: 'Members and pending invitations scoped to one project. Only team admins and owners can list them.',
+        path: '/projects/{uuid}/members',
+        operationId: 'list-project-members',
+        security: [
+            ['bearerAuth' => []],
+        ],
+        tags: ['Projects'],
+        parameters: [
+            new OA\Parameter(name: 'uuid', in: 'path', required: true, description: 'Project UUID', schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Members and pending invitations of the project.',
+                content: new OA\JsonContent(
+                    type: 'object',
+                    properties: [
+                        'members' => ['type' => 'array', 'items' => new OA\Items(ref: '#/components/schemas/User')],
+                        'invitations' => ['type' => 'array', 'items' => new OA\Items(type: 'object')],
+                    ],
+                ),
+            ),
+            new OA\Response(
+                response: 401,
+                ref: '#/components/responses/401',
+            ),
+            new OA\Response(
+                response: 403,
+                ref: '#/components/responses/403',
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Project not found.',
+            ),
+        ]
+    )]
+    public function project_members(Request $request)
+    {
+        $teamId = getTeamIdFromToken();
+        if (is_null($teamId)) {
+            return invalidTokenResponse();
+        }
+
+        if (! $request->uuid) {
+            return response()->json(['message' => 'Project UUID is required.'], 422);
+        }
+
+        $project = Project::whereTeamId($teamId)->whereUuid($request->uuid)->first();
+        if (! $project) {
+            return response()->json(['message' => 'Project not found.'], 404);
+        }
+        $this->authorize('manageMembers', $project->team);
+
+        $members = $project->team->members()->wherePivot('role', 'member')->get()
+            ->filter(function ($member) use ($project) {
+                return collect(Grant::listFrom($member->pivot->access))
+                    ->contains(fn (Grant $grant) => $grant->scope === AccessScope::Project && $grant->uuid === $project->uuid);
+            })
+            ->values();
+        $invitations = TeamInvitation::whereTeamId($teamId)
+            ->get()
+            ->filter(function (TeamInvitation $invitation) use ($project) {
+                return collect(Grant::listFrom($invitation->access))
+                    ->contains(fn (Grant $grant) => $grant->scope === AccessScope::Project && $grant->uuid === $project->uuid);
+            })
+            ->values()
+            ->map(fn (TeamInvitation $invitation) => [
+                'email' => $invitation->email,
+                'role' => $invitation->role,
+                'access' => Grant::listToArray(Grant::listFrom($invitation->access)),
+                'can_create_projects' => (bool) $invitation->can_create_projects,
+            ]);
+
+        return response()->json([
+            'members' => TeamController::serializeMembers($members),
+            'invitations' => $invitations,
+        ]);
     }
 
     #[OA\Post(
