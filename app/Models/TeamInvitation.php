@@ -14,11 +14,13 @@ class TeamInvitation extends Model
         'link',
         'via',
         'access',
+        'can_create_projects',
     ];
 
     protected $casts = [
         'link' => 'encrypted',
         'access' => 'array',
+        'can_create_projects' => 'boolean',
     ];
 
     /**
@@ -32,13 +34,14 @@ class TeamInvitation extends Model
     /**
      * Pivot attributes for the new `team_user` row. Grants apply only to the member role.
      *
-     * @return array{role: string, access: string|null}
+     * @return array{role: string, access: string|null, can_create_projects: bool}
      */
     public function membershipAttributes(): array
     {
         return [
             'role' => $this->role,
             'access' => $this->role === 'member' && $this->access !== null ? json_encode($this->access) : null,
+            'can_create_projects' => $this->role === 'member' && (bool) $this->can_create_projects,
         ];
     }
 
