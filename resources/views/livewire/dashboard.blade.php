@@ -166,7 +166,7 @@
             <x-section-heading title="Projects"
                 :href="$projects->count() > $dashboardItemLimit ? route('project.index') : null">
                 {{-- Projects has no sidebar entry, so the dashboard is where new projects start. --}}
-                @can('createAnyResource')
+                @can('create', App\Models\Project::class)
                     <x-slot:titleAction>
                         <x-modal-input title="New Project">
                             <x-slot:content>
