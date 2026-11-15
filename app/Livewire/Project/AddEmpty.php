@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Project;
 
+use App\Enums\AccessLevel;
 use App\Models\Project;
+use App\Services\Access\AccessResolver;
 use App\Support\ValidationPatterns;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
@@ -39,6 +41,9 @@ class AddEmpty extends Component
                 'team_id' => currentTeam()->id,
                 'uuid' => new_public_id(),
             ]);
+            app(AccessResolver::class)->grantProjectAccess(
+                auth()->user(), currentTeam()->id, $project, [AccessLevel::Write, AccessLevel::Deploy]
+            );
 
             $productionEnvironment = $project->environments()->where('name', 'production')->first();
 

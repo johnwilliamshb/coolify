@@ -148,6 +148,7 @@ class CloneMe extends Component
     private function cloneInto(string $type, int $teamId, StandaloneDocker|SwarmDocker $selectedDestination): array
     {
         if ($type === 'project') {
+            $this->authorize('create', Project::class);
             $foundProject = Project::query()->where('team_id', $teamId)->where('name', $this->newName)->first();
             if ($foundProject) {
                 throw new \Exception('Project with the same name already exists.');
@@ -157,6 +158,9 @@ class CloneMe extends Component
                 'team_id' => $teamId,
                 'description' => $this->project->description.' (clone)',
             ]);
+            app(AccessResolver::class)->grantProjectAccess(
+                auth()->user(), $teamId, $project, [AccessLevel::Write, AccessLevel::Deploy]
+            );
             if ($this->environment->name !== 'production') {
                 $project->environments()->create([
                     'name' => $this->environment->name,

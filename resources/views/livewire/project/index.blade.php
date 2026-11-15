@@ -6,7 +6,7 @@
     <div x-data="projectsIndex()" class="w-full">
         <header class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h1 class="min-w-0 truncate text-[24px]! leading-7! font-semibold! tracking-tight!">Projects</h1>
-            @can('createAnyResource')
+            @can('create', App\Models\Project::class)
                 <div class="w-fit shrink-0">
                     <x-modal-input title="New Project">
                         <x-slot:content>

@@ -209,6 +209,10 @@
             </div>
         @endif
     </div>
+
+    <div class="mt-8">
+        <livewire:project.members :project_uuid="$project->uuid" :wire:key="'project-members-'.$project->uuid" />
+    </div>
 </div>
 
 <script>
