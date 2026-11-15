@@ -304,7 +304,7 @@ class User extends Authenticatable implements PasskeyUser, SendsEmail
 
     public function teams()
     {
-        return $this->belongsToMany(Team::class)->withPivot('role', 'access');
+        return $this->belongsToMany(Team::class)->withPivot('role', 'access', 'can_create_projects');
     }
 
     public function changelogReads()
